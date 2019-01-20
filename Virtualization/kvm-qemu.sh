@@ -170,7 +170,8 @@ function install_kvm_linux_apt() {
     # WSL support
     apt-get install gcc make gnutls-bin -y
     # remove old
-    apt-get purge libvirt0 libvirt-bin -y
+    apt-get purge libvirt0 libvirt-bin virt-manager -y
+    apt-get-autoremove -y
     install_libvirt
 
     systemctl enable libvirtd.service
