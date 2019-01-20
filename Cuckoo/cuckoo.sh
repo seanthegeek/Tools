@@ -11,14 +11,19 @@
 # If you are using Ubuntu Server 18.04 LTS, remember to have in source list universe and multiverse support
 
 # Static values
+# for tor
+IFACE_IP="192.168.1.1"
 # DB password
 PASSWD="SuperPuperCAPESecret"
 CUCKOO_ROOT="/opt/sandbox"
 
 yara_version="3.8.1"
 
+mkdir -fp $CUCKOO_ROOT
 
-mkdir -p $CUCKOO_ROOT
+. /etc/os-release
+if [[ $ID = ubuntu ]]; then
+    read _ UBUNTU_VERSION_NAME <<< "$VERSION"
 
 function usage() {
 cat << EndOfHelp
@@ -105,16 +110,11 @@ function dependencies() {
 
     echo "[+] Installing MongoDB"
     sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 9DA31620334BD75D9DCB49F368818C72E52529D4
-    # 18.04
-    if grep -q "DISTRIB_RELEASE=18.04" /etc/lsb-release; then
-        echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb.list
-    # 16.04
-    else
-        echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/4.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb.list
-    fi
+
+    echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu $UBUNTU_VERSION_NAME/mongodb-org/4.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb.list
 
     sudo apt-get update
-    sudo apt-get install -y mongodb-org-mongos mongodb-org-server mongodb-org-shell mongodb-org-tools
+    sudo apt-get install -y mongodb-org
     pip install pymongo -U
 
     cat /etc/systemd/system/mongodb.service <<EOF
@@ -385,19 +385,6 @@ case "$COMMAND" in
         install_CAPE
     fi
     supervisor
-    crontab -l | { cat; echo "@reboot $CUCKOO_ROOT/utils/suricata.sh"; } | crontab -
-
-    # suricata with socket is faster
-    cat >> $CUCKOO_ROOT/utils/suricata.sh <<EOF
-    #!/bin/sh
-    # Add "@reboot $CUCKOO_ROOT/utils/suricata.sh" to the root crontab.
-    mkdir /var/run/suricata
-    chown cuckoo:cuckoo /var/run/suricata
-    LD_LIBRARY_PATH=/usr/local/lib /usr/bin/suricata -c /etc/suricata/suricata.yaml --unix-socket -k none -D
-    while [ ! -e /var/run/suricata/suricata-command.socket ]; do
-        sleep 1
-    done
-EOF
     ;;
 'supervisor')
     supervisor;;
