@@ -11,14 +11,14 @@
 # If you are using Ubuntu Server 18.04 LTS, remember to have in source list universe and multiverse support
 
 # Static values
-# Where to place everything
-# for tor
-IFACE_IP="192.168.1.1"
 # DB password
 PASSWD="SuperPuperCAPESecret"
-CUCKOO_ROOT="/opt/"
+CUCKOO_ROOT="/opt/sandbox"
 
 yara_version="3.8.1"
+
+
+mkdir -p $CUCKOO_ROOT
 
 function usage() {
 cat << EndOfHelp
@@ -44,91 +44,23 @@ EndOfHelp
 }
 
 function install_suricata(){
+    add-apt-repository -y ppa:oisf/suricata-stable
+    apt-get update
+    apt-get install -y suricata
+    pip install --upgrade suricata-update
+    suricata-update update-sources
+    suricata-update
 
-    # https://doc.rust-lang.org/1.0.0/book/installing-rust.html
-    curl -f -L https://static.rust-lang.org/rustup.sh -O
-    sh rustup.sh
-    # Speedup suricata >= 3.1
-    # https://redmine.openinfosecfoundation.org/projects/suricata/wiki/Hyperscan
-    # https://github.com/01org/hyperscan
-    cd /tmp || return
-    git clone https://github.com/01org/hyperscan.git
-    cd hyperscan/ || return
-    mkdir builded
-    cd builded || return
-    sudo apt-get install cmake libboost-dev ragel libhtp2 -y
-    # doxygen sphinx-common libpcap-dev
-    cmake -DBUILD_STATIC_AND_SHARED=1 ../
-    # tests
-    #bin/unit-hyperscan
-    make -j"$(getconf _NPROCESSORS_ONLN)"
-    sudo checkinstall -D --pkgname=hyperscan --default
-
-    echo '[+] Configure Suricata'
-    mkdir /var/run/suricata
-    sudo chown cuckoo:cuckoo /var/run/suricata -R
-
-    # if we wan suricata with hyperscan:
-    sudo apt-get -y install libpcre3 libpcre3-dbg libpcre3-dev \
-    build-essential autoconf automake libtool libpcap-dev libnet1-dev \
-    libyaml-0-2 libyaml-dev zlib1g zlib1g-dev libcap-ng-dev libcap-ng0 \
-    make libmagic-dev libjansson-dev libjansson4 pkg-config liblz4-dev
-    sudo apt-get -y install libnetfilter-queue-dev libnetfilter-queue1 libnfnetlink-dev libnfnetlink0
-
-    sudo pip install pyyaml
-
-    echo "/usr/local/lib" | sudo tee --append /etc/ld.so.conf.d/usrlocal.conf
-    sudo ldconfig
-
-    #cd /tmp || return
-    #wget https://github.com/luigirizzo/netmap/archive/v11.4.zip
-    #unzip v11.4.zip
-    #cd netmap-* || return
-    #./configure
-    #make -j"$(getconf _NPROCESSORS_ONLN)"
-    # https://redmine.openinfosecfoundation.org/projects/suricata/wiki/Ubuntu_Installation
-    cd /tmp || return
-    wget "https://www.openinfosecfoundation.org/download/suricata-current.tar.gz"
-    tar -xzf "suricata-current.tar.gz"
-    rm "suricata-current.tar.gz"
-    cd suricata-* || return
-    #cd rust && CARGO_HOME=/root/.cargo CARGO_TARGET_DIR=/tmp/suricata*/rust/target /root/.cargo/bin/cargo build --release --frozen --features " "
-    #cd .. || return
-    ./configure --enable-nfqueue --prefix=/usr --sysconfdir=/etc --localstatedir=/var --with-libhs-includes=/usr/local/include/hs/ --with-libhs-libraries=/usr/local/lib/
-    make -j"$(getconf _NPROCESSORS_ONLN)"
-    #sudo checkinstall -D --pkgname=suricata --default
-    make install-full
-    suricata --build-info|grep Hyperscan
-
-    cd scripts/suricatasc || return
-    python setup.py install
     touch /etc/suricata/threshold.config
 
 
-    """
-    You can now start suricata by running as root something like '/usr/bin/suricata -c /etc/suricata//suricata.yaml -i eth0'.
-
-    If a library like libhtp.so is not found, you can run suricata with:
-    LD_LIBRARY_PATH=/usr/lib /usr/bin/suricata -c /etc/suricata//suricata.yaml -i eth0
-
-    While rules are installed now, its highly recommended to use a rule manager for maintaining rules.
-    The two most common are Oinkmaster and Pulledpork. For a guide see:
-    https://redmine.openinfosecfoundation.org/projects/suricata/wiki/Rule_Management_with_Oinkmaster
-    """
-
-    # Download etupdate to update Emerging Threats Open IDS rules:
-    cd /tmp || return
-    git clone https://github.com/seanthegeek/etupdate.git
-    sudo cp etupdate/etupdate /usr/sbin
-    sudo /usr/sbin/etupdate -V
-
-    if ! grep -q "15 * * * * /usr/sbin/etupdate" $(crontab -l); then
-        crontab -l | { cat; echo "15 * * * * /usr/sbin/etupdate"; } | crontab -
+    if ! grep -q "15 * * * * /usr/local/bin/suricata-update" $(crontab -l); then
+        crontab -l | { cat; echo "15 * * * * /usr/local/bin/suricata-update"; } | crontab -
     fi
     if ! grep -q "15 * * * * /usr/bin/suricatasc -c reload-rules" $(crontab -l); then
         crontab -l | { cat; echo "15 * * * * /usr/bin/suricatasc -c reload-rules"; } | crontab -
     fi
-    #change suricata yaml
+
     sed -i 's/RUN=yes/RUN=no/g' /etc/default/suricata
     sed -i 's/mpm-algo: ac/mpm-algo: hs/g' /etc/suricata/suricata.yaml
     sed -i 's/mpm-algo: auto/mpm-algo: hs/g' /etc/suricata/suricata.yaml
@@ -265,26 +197,26 @@ EOF
     install_suricata
 
     # https://www.torproject.org/docs/debian.html.en
-    echo "deb http://deb.torproject.org/torproject.org bionic main" >> /etc/apt/sources.list
-    echo "deb-src http://deb.torproject.org/torproject.org bionic main" >> /etc/apt/sources.list
-    sudo apt-get install gnupg2 -y
-    gpg2 --recv A3C4F0F979CAA22CDBA8F512EE8CBC9E886DDD89
-    gpg2 --export A3C4F0F979CAA22CDBA8F512EE8CBC9E886DDD89 | apt-key add -
+    #echo "deb http://deb.torproject.org/torproject.org bionic main" >> /etc/apt/sources.list
+    #echo "deb-src http://deb.torproject.org/torproject.org bionic main" >> /etc/apt/sources.list
+    #sudo apt-get install gnupg2 -y
+    #gpg2 --recv A3C4F0F979CAA22CDBA8F512EE8CBC9E886DDD89
+    #gpg2 --export A3C4F0F979CAA22CDBA8F512EE8CBC9E886DDD89 | apt-key add -
 
-    sudo apt-get update
-    apt install tor deb.torproject.org-keyring -y
+    #sudo apt-get update
+    #apt install tor deb.torproject.org-keyring -y
     # Tor configuration
     #update-rc.d tor defaults
     #update-rc.d privoxy defaults
 
 
-    cat >> /etc/tor/torrc <<EOF
-    TransPort $IFACE_IP:9040
-    DNSPort $IFACE_IP:5353
-EOF
+    #cat >> /etc/tor/torrc <<EOF
+    #TransPort $IFACE_IP:9040
+    #DNSPort $IFACE_IP:5353
+#EOF
 
     #Then restart Tor:
-    service tor restart
+ #   service tor restart
 
     #Edit the Privoxy configuration
     #sudo sed -i 's/R#        forward-socks5t             /     127.0.0.1:9050 ./        forward-socks5t             /     127.0.0.1:9050 ./g' /etc/privoxy/config
@@ -392,19 +324,11 @@ function supervisor() {
     autorestart=true
     stderr_logfile=/var/log/supervisor/router.err.log
     stdout_logfile=/var/log/supervisor/router.out.log
-
-    [program:suricata]
-    command=bash -c "mkdir /var/run/suricata; chown cuckoo:cuckoo /var/run/suricata; LD_LIBRARY_PATH=/usr/local/lib /usr/bin/suricata -c /etc/suricata/suricata.yaml --unix-socket -k none --user cuckoo --group cuckoo"
-    user=root
-    autostart=true
-    autorestart=true
-    stderr_logfile=/var/log/supervisor/suricata.err.log
-    stdout_logfile=/var/log/supervisor/suricata.out.log
 EOF
 
     sudo service supervisor start
 
-    sudo systemctl enable tor.service
+    # sudo systemctl enable tor.service
     #sudo systemctl enable elasticsearch.service
     sudo systemctl enable supervisor.service
     sudo systemctl enable supervisor
