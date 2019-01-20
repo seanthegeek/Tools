@@ -19,7 +19,7 @@ CUCKOO_ROOT="/opt/sandbox"
 
 yara_version="3.8.1"
 
-mkdir -fp $CUCKOO_ROOT
+mkdir -p $CUCKOO_ROOT
 
 . /etc/os-release
 if [[ $ID = ubuntu ]]; then
