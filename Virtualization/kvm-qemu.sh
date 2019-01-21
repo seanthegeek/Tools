@@ -226,10 +226,10 @@ function install_kvm_linux_apt() {
         automake --add-missing
         ./configure
         make -j"$(getconf _NPROCESSORS_ONLN)"
-        checkinstall --pkgname=libvirt-glib --default
+        checkinstall --pkgname=libvirt-glib-1.0.0 --default
         #wget http://launchpadlibrarian.net/297448356/gir1.2-libvirt-glib-1.0_1.0.0-1_amd64.deb
         #dpkg -i gir1.2-libvirt-glib-1.0_1.0.0-1_amd64.deb
-        #apt-get install gir1.2-libvirt-glib-1.0 -y
+        apt-get install gir1.2-libvirt-glib-1.0 -y
 
         /sbin/ldconfig
     fi
