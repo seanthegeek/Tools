@@ -210,8 +210,9 @@ function install_kvm_linux_apt() {
     glib-networking-common glib-networking-services gsettings-desktop-schemas gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
     gstreamer1.0-x adwaita-icon-theme at-spi2-core augeas-lenses bridge-utils cpu-checker dconf-gsettings-backend dconf-service \
     fontconfig fontconfig-config fonts-dejavu-core genisoimage gir1.2-appindicator3-0.1 gir1.2-secret-1 -y 2>/dev/null
-    # should be installed first
 
+    apt-get remove -y python-cairo python-gobject python3-cairo python3-gobject
+    
     pip install pycairo
     pip3 install pycairo
     pip3 install PyGObject -U
@@ -683,7 +684,8 @@ OS="$(uname -s)"
 
 case "$COMMAND" in
 'all')
-    apt-get install language-pack-utf-8
+    # This package does not exist
+    #apt-get install language-pack-UTF-8
     qemu_func
     seabios_func
     if [ "$OS" = "Linux" ]; then
