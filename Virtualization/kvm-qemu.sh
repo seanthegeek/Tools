@@ -107,7 +107,7 @@ function install_libvirt() {
         # --prefix=/usr --localstatedir=/var --sysconfdir=/etc
         ./autogen.sh --system  --with-qemu=yes --with-dtrace --with-numad --with-storage-rbd  --disable-nls --with-openvz=no --with-vmware=no --with-phyp=no --with-xenapi=no --with-libxl=no  --with-vbox=no --with-lxc=no --with-vz=no   --with-esx=no --with-hyperv=no --with-yajl=yes --with-secdriver-apparmor=yes --with-apparmor-profiles --with-apparmor-profiles
         make -j"$(getconf _NPROCESSORS_ONLN)"
-        checkinstall -D --pkgname=libvirt-$libvirt_version --default
+        checkinstall -D --pkgname=libvirt0 --default
         #make -j"$(getconf _NPROCESSORS_ONLN)" install
     elif [ "$OS" = "Darwin" ]; then
         ./autogen.sh --system --prefix=/usr/local/ --localstatedir=/var --sysconfdir=/etc --with-qemu=yes --with-dtrace --disable-nls --with-openvz=no --with-vmware=no --with-phyp=no --with-xenapi=no --with-libxl=no  --with-vbox=no --with-lxc=no --with-vz=no   --with-esx=no --with-hyperv=no --with-wireshark-dissector=no --with-yajl=yes
@@ -226,7 +226,7 @@ function install_kvm_linux_apt() {
         automake --add-missing
         ./configure
         make -j"$(getconf _NPROCESSORS_ONLN)"
-        checkinstall --pkgname=libvirt-glib-1.0-0 --default
+        checkinstall --pkgname=libvirt-glib --default
         wget http://launchpadlibrarian.net/297448356/gir1.2-libvirt-glib-1.0_1.0.0-1_amd64.deb
         dpkg -i gir1.2-libvirt-glib-1.0_1.0.0-1_amd64.deb
         #apt-get install gir1.2-libvirt-glib-1.0 -y
@@ -457,7 +457,7 @@ function qemu_func() {
                 fi
                 make -j"$(getconf _NPROCESSORS_ONLN)"
                 if [ "$OS" = "Linux" ]; then
-                    checkinstall -D --pkgname=qemu-$qemu_version --nodoc --showinstall=no --default
+                    checkinstall -D --pkgname=qemu --nodoc --showinstall=no --default
                 elif [ "$OS" = "Darwin" ]; then
                     make -j"$(getconf _NPROCESSORS_ONLN)" install
                 fi
